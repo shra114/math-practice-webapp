@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multiplication Practice Game</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f3f6fb;
+      color: #1f2937;
+    }
+
+    .app {
+      width: min(900px, 95vw);
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      display: grid;
+      gap: 20px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .game-panel h1 {
+      margin: 0 0 12px;
+      font-size: 1.4rem;
+    }
+
+    .question {
+      font-size: 1.5rem;
+      margin: 12px 0;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    input[type="number"] {
+      padding: 10px;
+      font-size: 1rem;
+      width: 170px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .meta {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-weight: 600;
+    }
+
+    .status {
+      min-height: 24px;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    .status.ok {
+      color: #15803d;
+    }
+
+    .status.error {
+      color: #b91c1c;
+    }
+
+    .review-panel {
+      border-left: 1px solid #e5e7eb;
+      padding-left: 16px;
+    }
+
+    .review-panel h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+    }
+
+    #wrongList {
+      margin: 8px 0 16px;
+      padding-left: 18px;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .review-file {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 160px;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 750px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .review-panel {
+        border-left: none;
+        border-top: 1px solid #e5e7eb;
+        padding-left: 0;
+        padding-top: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="game-panel">
+      <h1>Multiplication Game</h1>
+      <div id="questionText" class="question">0 x 0 = ?</div>
+      <div class="controls">
+        <input id="answerInput" type="number" placeholder="Enter your answer" />
+        <button id="submitBtn" type="button">Submit</button>
+      </div>
+      <div class="meta">
+        <div>Score: <span id="scoreText">0/0</span></div>
+        <div>Correct: <span id="correctText">0</span></div>
+        <div>Total: <span id="totalText">0</span></div>
+      </div>
+      <div id="statusText" class="status"></div>
+    </section>
+
+    <aside class="review-panel">
+      <h2>Wrong Questions (review.txt)</h2>
+      <ul id="wrongList"></ul>
+      <button id="downloadBtn" type="button">Download review.txt</button>
+      <h2 style="margin-top: 16px;">review.txt Preview</h2>
+      <pre id="reviewPreview" class="review-file">No wrong answers yet.</pre>
+    </aside>
+  </main>
+
+  <script>
+    const questionText = document.getElementById("questionText");
+    const answerInput = document.getElementById("answerInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const scoreText = document.getElementById("scoreText");
+    const correctText = document.getElementById("correctText");
+    const totalText = document.getElementById("totalText");
+    const statusText = document.getElementById("statusText");
+    const wrongList = document.getElementById("wrongList");
+    const reviewPreview = document.getElementById("reviewPreview");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    let a = 0;
+    let b = 0;
+    let correct = 0;
+    let total = 0;
+    const wrongQuestions = [];
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function nextQuestion() {
+      a = randomInt(1, 12);
+      b = randomInt(1, 12);
+      questionText.textContent = `${a} x ${b} = ?`;
+      answerInput.value = "";
+      answerInput.focus();
+    }
+
+    function updateScore() {
+      scoreText.textContent = `${correct}/${total}`;
+      correctText.textContent = String(correct);
+      totalText.textContent = String(total);
+    }
+
+    function buildReviewText() {
+      if (wrongQuestions.length === 0) {
+        return "No wrong answers yet.";
+      }
+      return wrongQuestions
+        .map((item, idx) => {
+          return `${idx + 1}. ${item.question} | Your answer: ${item.given} | Correct: ${item.correct}`;
+        })
+        .join("\n");
+    }
+
+    function refreshReviewPanel() {
+      wrongList.innerHTML = "";
+      if (wrongQuestions.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No wrong answers yet.";
+        wrongList.appendChild(li);
+      } else {
+        wrongQuestions.forEach((item) => {
+          const li = document.createElement("li");
+          li.textContent = `${item.question} -> you: ${item.given}, correct: ${item.correct}`;
+          wrongList.appendChild(li);
+        });
+      }
+      reviewPreview.textContent = buildReviewText();
+    }
+
+    function downloadReviewFile() {
+      const content = buildReviewText();
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "review.txt";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function submitAnswer() {
+      const raw = answerInput.value.trim();
+      if (raw === "") {
+        statusText.textContent = "Please enter an answer.";
+        statusText.className = "status error";
+        return;
+      }
+
+      const userAnswer = Number(raw);
+      const actualAnswer = a * b;
+      total += 1;
+
+      if (userAnswer === actualAnswer) {
+        correct += 1;
+        statusText.textContent = "Correct!";
+        statusText.className = "status ok";
+      } else {
+        statusText.textContent = `Wrong. ${a} x ${b} = ${actualAnswer}`;
+        statusText.className = "status error";
+        wrongQuestions.push({
+          question: `${a} x ${b}`,
+          given: userAnswer,
+          correct: actualAnswer
+        });
+      }
+
+      updateScore();
+      refreshReviewPanel();
+      nextQuestion();
+    }
+
+    submitBtn.addEventListener("click", submitAnswer);
+    downloadBtn.addEventListener("click", downloadReviewFile);
+    answerInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        submitAnswer();
+      }
+    });
+
+    updateScore();
+    refreshReviewPanel();
+    nextQuestion();
+  </script>
+</body>
+</html>
