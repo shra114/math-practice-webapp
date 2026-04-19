@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multiplication Practice Game</title>
+  <title>Math Practice Game</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -47,6 +47,20 @@
       gap: 10px;
       flex-wrap: wrap;
       margin-bottom: 12px;
+    }
+
+    .question-setup {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    .question-setup select {
+      padding: 10px;
+      font-size: 1rem;
+      min-width: 160px;
     }
 
     input[type="number"] {
@@ -135,7 +149,18 @@
 <body>
   <main class="app">
     <section class="game-panel">
-      <h1>Multiplication Game</h1>
+      <h1>Math Game</h1>
+      <div class="question-setup">
+        <input id="operandAMinInput" type="number" placeholder="Operand A min" />
+        <input id="operandAMaxInput" type="number" placeholder="Operand A max" />
+        <select id="operationSelect">
+          <option value="multiply">Multiplication (x)</option>
+          <option value="add">Addition (+)</option>
+          <option value="subtract">Subtraction (-)</option>
+          <option value="divide">Division (/)</option>
+        </select>
+        <input id="operandTwoInput" type="number" placeholder="Operand B start (1-10)" />
+      </div>
       <div id="questionText" class="question">0 x 0 = ?</div>
       <div class="controls">
         <input id="answerInput" type="number" placeholder="Enter your answer" />
@@ -160,6 +185,10 @@
 
   <script>
     const questionText = document.getElementById("questionText");
+    const operandAMinInput = document.getElementById("operandAMinInput");
+    const operandAMaxInput = document.getElementById("operandAMaxInput");
+    const operandTwoInput = document.getElementById("operandTwoInput");
+    const operationSelect = document.getElementById("operationSelect");
     const answerInput = document.getElementById("answerInput");
     const submitBtn = document.getElementById("submitBtn");
     const scoreText = document.getElementById("scoreText");
@@ -172,6 +201,7 @@
 
     let a = 0;
     let b = 0;
+    let operation = "multiply";
     let correct = 0;
     let total = 0;
     const wrongQuestions = [];
@@ -180,10 +210,43 @@
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
+    function getOperationSymbol(type) {
+      if (type === "add") return "+";
+      if (type === "subtract") return "-";
+      if (type === "divide") return "/";
+      return "x";
+    }
+
+    function calculateAnswer(left, right, type) {
+      if (type === "add") return left + right;
+      if (type === "subtract") return left - right;
+      if (type === "divide") return left / right;
+      return left * right;
+    }
+
+    function toStartValue(rawValue, fallback, min, max) {
+      if (rawValue === "") return fallback;
+      const parsed = Math.floor(Number(rawValue));
+      if (Number.isNaN(parsed)) return fallback;
+      return Math.min(max, Math.max(min, parsed));
+    }
+
     function nextQuestion() {
-      a = randomInt(1, 12);
-      b = randomInt(1, 12);
-      questionText.textContent = `${a} x ${b} = ?`;
+      const rawAMin = operandAMinInput.value.trim();
+      const rawAMax = operandAMaxInput.value.trim();
+      const rawB = operandTwoInput.value.trim();
+      operation = operationSelect.value;
+
+      const minA = toStartValue(rawAMin, 1, 1, 999);
+      const maxAInput = toStartValue(rawAMax, 20, 1, 999);
+      const maxA = Math.max(minA, maxAInput);
+      const startB = toStartValue(rawB, 1, 1, 10);
+
+      a = randomInt(minA, maxA);
+      b = randomInt(startB, 10);
+
+      const symbol = getOperationSymbol(operation);
+      questionText.textContent = `${a} ${symbol} ${b} = ?`;
       answerInput.value = "";
       answerInput.focus();
     }
@@ -243,7 +306,8 @@
       }
 
       const userAnswer = Number(raw);
-      const actualAnswer = a * b;
+      const actualAnswer = calculateAnswer(a, b, operation);
+      const symbol = getOperationSymbol(operation);
       total += 1;
 
       if (userAnswer === actualAnswer) {
@@ -251,10 +315,10 @@
         statusText.textContent = "Correct!";
         statusText.className = "status ok";
       } else {
-        statusText.textContent = `Wrong. ${a} x ${b} = ${actualAnswer}`;
+        statusText.textContent = `Wrong. ${a} ${symbol} ${b} = ${actualAnswer}`;
         statusText.className = "status error";
         wrongQuestions.push({
-          question: `${a} x ${b}`,
+          question: `${a} ${symbol} ${b}`,
           given: userAnswer,
           correct: actualAnswer
         });
@@ -267,6 +331,10 @@
 
     submitBtn.addEventListener("click", submitAnswer);
     downloadBtn.addEventListener("click", downloadReviewFile);
+    operationSelect.addEventListener("change", nextQuestion);
+    operandAMinInput.addEventListener("input", nextQuestion);
+    operandAMaxInput.addEventListener("input", nextQuestion);
+    operandTwoInput.addEventListener("input", nextQuestion);
     answerInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         submitAnswer();
