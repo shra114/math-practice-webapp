@@ -340,8 +340,21 @@
         const maxA = Math.max(minA, maxAInput);
         const startB = toStartValue(rawB, 1, 1, 10);
 
-        a = randomInt(minA, maxA);
-        b = randomInt(startB, 10);
+        const operandA = randomInt(minA, maxA);
+        const operandB = randomInt(startB, 10);
+
+        if (operation === "divide") {
+          const c = operandA * operandB;
+          const d = Math.random() < 0.5 ? operandA : operandB;
+          a = c;
+          b = d;
+        } else if (operation === "subtract") {
+          a = Math.max(operandA, operandB);
+          b = Math.min(operandA, operandB);
+        } else {
+          a = operandA;
+          b = operandB;
+        }
 
         const symbol = getOperationSymbol(operation);
         questionText.textContent = `${a} ${symbol} ${b} = ?`;
